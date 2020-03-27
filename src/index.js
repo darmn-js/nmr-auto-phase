@@ -1,5 +1,5 @@
 /**
- * Phase correction filter
+ * Automatic Phase correction algorithm
  * @param {SD} spectraData - SD instance
  * @param {number} [phi0 = 0] - value
  * @param {number} [phi1 = 0] - value
@@ -23,6 +23,12 @@ export default function autoPhaseCorrection(spectraData) {
   
 }
 
+/**
+ * Return a single array containingn the magnitud of the complex array
+ * @param {Array} re 
+ * @param {Array} im 
+ * @returns {Array} magnitud
+ */
 function getMagnitudSpectrum(re, im) {
   let mag = new Array(re.length);
   for (let i = 0; i < re.length; i++) {
@@ -31,6 +37,11 @@ function getMagnitudSpectrum(re, im) {
   return mag;
 }
 
+/**
+ * Calculate the first derivative of the smoothed spectrum
+ * @param {Array} s 
+ * @returns {Array}  
+ */
 function holoborodko(s) {
   let dk = new Array(re.length);
   for (let i = 5; i < re.length - 5; i++) {
@@ -82,23 +93,13 @@ function robustBaseLineRegionsDetection(s) {
   return mask;
 }
 
-function mean(s) {
-  let sum = 0;
-  for (i = 0; i < s.length; i++) {
-    sum += s[i];
-  }
-  return sum / s.length;
-}
-
-function std(s) {
-  let m = mean(s);
-  let sum = 0;
-  for (let i = 0; i < s.length; i++) {
-    sum += Math.pow(s[i] - mean, 2);
-  }
-  return Math.sqrt(sum / s.length);
-}
-
+/**
+ * Return the mean and the std of a given array, considering in the calculation only the points
+ * where mask[i] == false
+ * @param {Array} s 
+ * @param {Array} mask 
+ * @returns {object} {mean, std}
+ */
 function stats(s, mask) {
   let m = mean(s);
   let sum = 0;
