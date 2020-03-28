@@ -18,13 +18,11 @@ export default function autoPhaseCorrection(spectraData) {
   let finalPeaks = new Array(re.length);
   for (let i = 0; i < re.length; i++) {
     finalPeaks[i] = peaksDs[i] || peaksSp[i];
-  }
-
-  
+  }  
 }
 
 /**
- * Return a single array containingn the magnitud of the complex array
+ * Return a single array containing the magnitud of the complex array
  * @param {Array} re 
  * @param {Array} im 
  * @returns {Array} magnitud
@@ -51,6 +49,11 @@ function holoborodko(s) {
   return dk;
 }
 
+/**
+ * Returns a binary mask, marking the zones containing peaks. 
+ * @param {Array} s 
+ * @returns {Array}
+ */
 function robustBaseLineRegionsDetection(s) {
   let mask = new Array(s.length);
   for (let i = 0; i < s.length; i++) {
@@ -91,6 +94,19 @@ function robustBaseLineRegionsDetection(s) {
   }
 
   return mask;
+}
+
+/**
+ * Returns the mean of the spectrum
+ * @param {Array} s 
+ * @returns {number}
+ */
+function mean(s) {
+  let sum = 0;
+  for (i = 0; i < s.length; i++) {
+    sum += s[i];
+  }
+  return sum / s.length;
 }
 
 /**
