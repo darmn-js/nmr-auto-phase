@@ -10,15 +10,20 @@ export default function autoPhaseCorrection(spectraData) {
   let nbPoints = spectraData.getNbPoints();
   let reData = spectraData.getYData(0);
   let imData = spectraData.getYData(1);
-  let magData = getMagnitudSpectrum(reData, imData);
+  let xData = spectraData.getXData(0);
+  let magData = reData;//getMagnitudSpectrum(reData, imData);
 
   let ds = holoborodko(magData);
   let peaksDs = robustBaseLineRegionsDetection(ds);
   let peaksSp = robustBaseLineRegionsDetection(magData);
-  let finalPeaks = new Array(re.length);
-  for (let i = 0; i < re.length; i++) {
-    finalPeaks[i] = peaksDs[i] || peaksSp[i];
-  }  
+  let finalPeaks = new Array(reData.length);
+  let xy = [];
+  for (let i = 0; i < reData.length; i++) {
+    finalPeaks[i] = peaksSp[i] | peaksSp[i];
+    xy.push(xData[i]);
+    xy.push(finalPeaks[i] * 1);
+  }
+  API.createData('mask', xy);
 }
 
 /**
@@ -41,11 +46,17 @@ function getMagnitudSpectrum(re, im) {
  * @returns {Array}  
  */
 function holoborodko(s) {
-  let dk = new Array(re.length);
-  for (let i = 5; i < re.length - 5; i++) {
+  let dk = new Array(s.length);
+  for (let i = 5; i < s.length - 5; i++) {
     dk[i] = (42 * (s[i + 1] - s[i - 1]) + 48 * (s[i + 2] - s[i - 2]) + 27 * (s[i + 3] + s[i - 3])
       + 8 * (s[i + 4] - s[i - 4]) + s[i + 5] - s[i - 5]) / 512;
   }
+  //Fill the borders
+  for (let i = 0; i < 5; i ++) {
+      dk[i] = dk[5];
+      dk[s.length - i - 1] = dk[s.length -  6]
+  }
+  
   return dk;
 }
 
@@ -63,9 +74,10 @@ function robustBaseLineRegionsDetection(s) {
   //Recursivelly check for points greater than 3 times the sdt
   let change = true;
   while (change) {
-    let stats = stats(s, mask);
-    let noiseLevel = 3 * stats.std;
-    let mean = stats.mean;
+    let res = stats(s, mask);
+    let noiseLevel = 3 * res.std;
+    console.log(noiseLevel)
+    let mean = res.mean;
     change = false;
     for (let i = 0; i < s.length; i++) {
       if (Math.abs(s[i] - mean) > noiseLevel && !mask[i]) {
@@ -103,7 +115,7 @@ function robustBaseLineRegionsDetection(s) {
  */
 function mean(s) {
   let sum = 0;
-  for (i = 0; i < s.length; i++) {
+  for (let i = 0; i < s.length; i++) {
     sum += s[i];
   }
   return sum / s.length;
@@ -117,12 +129,21 @@ function mean(s) {
  * @returns {object} {mean, std}
  */
 function stats(s, mask) {
-  let m = mean(s);
-  let sum = 0;
+  let m = 0;
   let count = 0;
   for (let i = 0; i < s.length; i++) {
     if (!mask[i]) {
-      sum += Math.pow(s[i] - mean, 2);
+        m += s[i];
+        count++;
+    }
+  }
+  
+  m /= count;
+  let sum = 0;
+ 
+  for (let i = 0; i < s.length; i++) {
+    if (!mask[i]) {
+      sum += Math.pow(s[i] - m, 2);
       count++;
     }
   }
