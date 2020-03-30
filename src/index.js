@@ -25,7 +25,7 @@ function autoPhaseCorrection(spectraData) {
     xy.push(xData[i]);
     xy.push(finalPeaks[i] * 1);
   }
-  API.createData('mask', xy);
+  //API.createData('mask', xy);
 
   console.log(nbPoints);
   // Once the regions are detected, we auto phase each of them separately. 
@@ -65,7 +65,6 @@ function autoPhaseCorrection(spectraData) {
   console.log(reg);
                                             
   spectraData.phaseCorrection(reg[1] * Math.PI / 180, reg[0] * Math.PI / 180);
-
 }
 
 /**
