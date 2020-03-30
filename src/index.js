@@ -1,15 +1,15 @@
+const MINREGSIZE = 256;//It must be given in PPM or HZ 
 /**
  * Implementation of the algorithm for automatic phase correction: A robust, general automatic phase 
  * correction algorithm for high-resolution NMR data. 10.1002/mrc.4586
  * @param {object} spectraData 
  */
 function autoPhaseCorrection(spectraData) {
-
   let nbPoints = spectraData.getNbPoints();
   let reData = spectraData.getYData(0);
   let imData = spectraData.getYData(1);
   let xData = spectraData.getXData(0);
-  let magData = reData;//getMagnitudSpectrum(reData, imData);
+  let magData = getMagnitudSpectrum(reData, imData);
   
   // TODO: It could be better to use the magnitud spectrum instead of the real data
   // for determining the peak regions
@@ -25,8 +25,9 @@ function autoPhaseCorrection(spectraData) {
     xy.push(xData[i]);
     xy.push(finalPeaks[i] * 1);
   }
-  //API.createData('mask', xy);
+  API.createData('mask', xy);
 
+  console.log(nbPoints);
   // Once the regions are detected, we auto phase each of them separately. 
   // TODO: This part can be put inside a function
   let i = -1;
@@ -49,7 +50,7 @@ function autoPhaseCorrection(spectraData) {
         i++;
       }
       
-      if (re.length > 0) {
+      if (re.length > MINREGSIZE) {
         res.push(autoPhaseRegion(re, im, x0));
       }
   }
@@ -58,7 +59,10 @@ function autoPhaseCorrection(spectraData) {
   // until they can perform a regression witout bad points. Can someone help here?
   let reg = weightedLinearRegression(res.map(r => r.x0 / nbPoints), 
                                             res.map(r => r.ph0), 
-                                            res.map(r => r.area));
+                                            res.map(r => r.area / 1e11));
+  
+  res.forEach(r => console.log(r.x0 / nbPoints + " " + r.ph0 + " " + r.area ));
+  console.log(reg);
                                             
   spectraData.phaseCorrection(reg[1] * Math.PI / 180, reg[0] * Math.PI / 180);
 
@@ -105,12 +109,14 @@ function autoPhaseRegion(re, im, x0) {
   
   // Calculate the area for the best angle
   let phased = phaseCorrection(re, im, Math.PI * bestAng / 180, 0);
-  let area =0;
+  let area = 0;
+  let sumX = 0;
   for (let j = 0; j < re.length; j++) {
       area += phased.re[j];
+      sumX += phased.re[j] * (j + x0);
   }
   //console.log(bestAng + " " + minArea);
-  return { ph0: bestAng, area, x0 }
+  return { ph0: bestAng, area, x0: sumX / area }
 }
 
 /**
@@ -176,7 +182,7 @@ function robustBaseLineRegionsDetection(s) {
   // Clean up mask by merging peaks blocks, separated by just a few points(4??).
   let count = 0;
   let prev = 0;
-  const SMALL = 64;
+  const SMALL = MINREGSIZE;
   for (let i = 0; i < s.length; i++) {
     if (!mask[i]) {
       count++;
@@ -315,3 +321,26 @@ function weightedLinearRegression(x, y, w) {
              inMx[1][0] * sxtwy + inMx[1][1] * swy];
     
 }
+
+async function processZip(file) {
+    const JSZip = await API.require('jszip');
+    const zipData=API.getData('zipData');
+    
+    const jsZip = new JSZip();
+    // more files !
+    const zip = await jsZip.loadAsync(file.content, {base64: true})
+    
+    let files=Object.keys(zip.files).filter( name => name.endsWith('fid'));
+    
+    files=await Promise.all(files.map( async (file) => {
+        let result={};
+        let parts=file.split("/");
+        result.nameAcqus=file.replace(/fid$/,'acqus');
+        result.acqus=await zip.file(result.nameAcqus).async('text');
+        result.content=await zip.file(file).async('arraybuffer');
+        return result;
+    }));
+    return files
+}
+
+module.exports = autoPhaseCorrection;
