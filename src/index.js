@@ -1,3 +1,8 @@
+/**
+ * Implementation of the algorithm for automatic phase correction: A robust, general automatic phase 
+ * correction algorithm for high-resolution NMR data. 10.1002/mrc.4586
+ * @param {object} spectraData 
+ */
 function autoPhaseCorrection(spectraData) {
 
   let nbPoints = spectraData.getNbPoints();
